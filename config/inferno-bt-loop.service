@@ -1,0 +1,21 @@
+[Unit]
+Description=Inferno Bluetooth Loopback → Dante Bridge
+After=statime-inferno.service sound.target default.target
+After=inferno-bt-keepalive.service
+
+[Service]
+Type=simple
+ExecStartPre=/bin/sh -c 'while [ ! -S /tmp/ptp-usrvclock ]; do sleep 1; done'
+ExecStart=/usr/bin/alsaloop \
+  -C hw:Loopback,1,2 \
+  -P inferno_bluetooth \
+  -r 48000 \
+  -f S32_LE \
+  -c 2 \
+  -t 20000
+Restart=always
+RestartSec=3
+TimeoutStopSec=5
+
+[Install]
+WantedBy=default.target

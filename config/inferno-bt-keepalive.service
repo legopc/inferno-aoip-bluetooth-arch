@@ -1,0 +1,13 @@
+[Unit]
+Description=Inferno BT Loopback Keepalive (silence when BT not connected)
+After=sound.target default.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/aplay -D bt_mix -r 48000 -f S32_LE -c 2 /dev/zero
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=5
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,34 @@
+[Unit]
+Description=Bluetooth A2DP → snd-aloop (clock buffer before Dante TX)
+After=bluetooth.target bluealsa.service
+Wants=bluetooth.target bluealsa.service
+
+[Service]
+Type=simple
+# Wait for inferno PTP clock socket before starting (Dante TX depends on it).
+ExecStartPre=/bin/sh -c 'while [ ! -S /tmp/ptp-usrvclock ]; do sleep 1; done'
+# Poll bluealsa until an A2DP device appears, then stream to bt_loopback.
+# The phone manages the A2DP connection — do NOT use "bluetoothctl connect"
+# here; it blocks ~41 s waiting for LE before BR/EDR succeeds and would time
+# out before A2DP negotiates.
+#
+# Volume control: --volume=software forces PCM-level software volume scaling.
+# bt_loopback is a plug device with no ALSA mixer control, so --volume=auto
+# (the default) fails silently with "Couldn't open ALSA mixer" and only the
+# mute (vol=0) AVRCP event is honoured. --volume=software bypasses the mixer
+# and scales samples directly in the PCM stream for all volume levels 0-127.
+# Do NOT pass --volume=none — that silently discards all volume changes.
+#
+# Chain: bluealsad (A2DP S16_LE/44100) → bt_loopback plug (rate+fmt convert)
+#        → hw:Loopback,0,2 (S32_LE/48000) → inferno_bluetooth PCM → Dante TX
+ExecStart=/bin/sh -c 'while true; do \
+    until bluealsa-aplay -l 2>/dev/null | grep -q A2DP; do sleep 2; done; \
+    echo "A2DP ready — writing to loopback"; \
+    bluealsa-aplay --volume=software -D bt_loopback 2>&1 || true; \
+    echo "bluealsa-aplay exited, waiting for reconnect..."; \
+done'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
