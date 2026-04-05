@@ -1,0 +1,16 @@
+[Unit]
+Description=Statime PTP daemon (Inferno fork — PTPv1 support)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+# Update path to match where you cloned and built statime
+WorkingDirectory=/home/legopc/statime
+ExecStart=/home/legopc/statime/target/debug/statime -c /home/legopc/statime/inferno-ptpv1.toml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
